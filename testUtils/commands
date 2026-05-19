@@ -1,5 +1,4 @@
-cd /home/pradeep/test/go-gin-server
-docker build -f dockerfile_promethius.client -t employee-service:v1 .
+make docker-build
 
 
 
@@ -16,9 +15,9 @@ minikube addons enable storage-provisioner
 
 kubectl get storageclass
 
-minikube image load <image-name>:<tag>
+minikube image load promethius:vv1
+minikube image load employee-service:vv1
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 

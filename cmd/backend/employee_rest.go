@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -72,6 +73,8 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		"get-employee",
 	)
+
+	fmt.Print("fdfd")
 
 	defer span.End()
 
