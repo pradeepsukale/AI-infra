@@ -1,0 +1,24 @@
+cd /home/pradeep/test/go-gin-server
+docker build -f dockerfile_promethius.client -t employee-service:v1 .
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+minikube delete --all --purge   --> Delete all minikube data
+
+minikube start --driver=docker
+
+kubectl cluster-info --> See if cluster is ready
+
+minikube addons enable default-storageclass
+minikube addons enable storage-provisioner
+
+kubectl get storageclass
+
+minikube image load <image-name>:<tag>
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+

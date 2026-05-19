@@ -1,0 +1,8 @@
+grafana:
+  persistence:
+    enabled: false
+
+  # (optional) keep things simple for now
+  sidecar:
+    dashboards:
+      enabled: true
