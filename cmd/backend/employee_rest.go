@@ -34,6 +34,8 @@ func initTracer() func() {
 
 	ctx := context.Background()
 
+	// The OTLP gRPC exporter sends completed spans to the OpenTelemetry
+	// Collector service running inside Kubernetes.
 	exporter, err := otlptracegrpc.New(
 		ctx,
 		otlptracegrpc.WithEndpoint("otel-collector:4317"),
@@ -44,6 +46,8 @@ func initTracer() func() {
 		panic(err)
 	}
 
+	// The tracer provider owns span processors and resource metadata, including
+	// the service.name used by backends such as Jaeger.
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(
@@ -54,9 +58,12 @@ func initTracer() func() {
 		),
 	)
 
+	// Register this provider globally so otel.Tracer uses the configured
+	// exporter and resource for every span created by this process.
 	otel.SetTracerProvider(tp)
 
-	// ADD THIS LINE
+	// Configure W3C TraceContext and Baggage propagation so trace IDs flow
+	// across HTTP service boundaries.
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	return func() {
@@ -66,9 +73,12 @@ func initTracer() func() {
 
 func employeeHandler(w http.ResponseWriter, r *http.Request) {
 
+	// otel.Tracer returns an instrumentation-scoped tracer used to create spans
+	// for this service's custom business operations.
 	tracer := otel.Tracer("employee-service")
 
-	// CONTINUES incoming trace automatically
+	// Start creates a span from the incoming request context, continuing the
+	// distributed trace extracted by the otelhttp server middleware.
 	ctx, span := tracer.Start(
 		r.Context(),
 		"get-employee",
@@ -91,7 +101,7 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 		attribute.String("employee.id", employeeID),
 	)
 
-	// Child span
+	// A child span records work that happens inside the get-employee span.
 	_, dbSpan := tracer.Start(
 		ctx,
 		"fake-db-call",
@@ -122,6 +132,8 @@ func main() {
 	shutdown := initTracer()
 	defer shutdown()
 
+	// NewHandler instruments inbound HTTP requests by extracting trace context
+	// and creating a server span for each request.
 	handler := otelhttp.NewHandler(
 		http.HandlerFunc(employeeHandler),
 		"employee-handler",

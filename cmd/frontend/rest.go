@@ -39,8 +39,12 @@ func init() {
 
 func hello(w http.ResponseWriter, r *http.Request) {
 
+	// otel.Tracer returns an instrumentation-scoped tracer used to create spans
+	// for this service's custom business operations.
 	tracer := otel.Tracer("hello-service")
 
+	// Start creates a span from the incoming request context, preserving any
+	// distributed trace context extracted by the otelhttp server middleware.
 	ctx, span := tracer.Start(
 		r.Context(),
 		"business-logic",
@@ -55,6 +59,8 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("About to call Employee API")
 
 	client := http.Client{
+		// NewTransport wraps the default HTTP transport so outbound requests
+		// create client spans and inject trace headers into downstream calls.
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
 		),
@@ -94,7 +100,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	// child span
+	// A child span records work that happens inside the business-logic span.
 	_, dbSpan := tracer.Start(
 		ctx,
 		"fake-db-call",
@@ -121,7 +127,8 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func main() {
 	ctx := context.Background()
 
-	// OTEL Collector service inside k8s
+	// The OTLP gRPC exporter sends completed spans to the OpenTelemetry
+	// Collector service running inside Kubernetes.
 	exporter, err := otlptracegrpc.New(
 		ctx,
 		otlptracegrpc.WithEndpoint("otel-collector:4317"),
@@ -132,7 +139,8 @@ func main() {
 		panic(err)
 	}
 
-	// Tracer provider
+	// The tracer provider owns span processors and resource metadata, including
+	// the service.name used by backends such as Jaeger.
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(
@@ -143,16 +151,20 @@ func main() {
 		),
 	)
 
+	// Register this provider globally so otel.Tracer uses the configured
+	// exporter and resource for every span created by this process.
 	otel.SetTracerProvider(tp)
 
-	// ADD THIS LINE
+	// Configure W3C TraceContext and Baggage propagation so trace IDs flow
+	// across HTTP service boundaries.
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	defer func() {
 		_ = tp.Shutdown(ctx)
 	}()
 
-	// HTTP handler with tracing middleware
+	// NewHandler instruments inbound HTTP requests by extracting trace context
+	// and creating a server span for each request.
 	handler := otelhttp.NewHandler(
 		http.HandlerFunc(hello),
 		"hello-handler",
