@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,17 +10,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"promethius/utils"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/propagation"
-
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 var httpDuration = prometheus.NewHistogramVec(
@@ -125,43 +119,8 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	ctx := context.Background()
-
-	// The OTLP gRPC exporter sends completed spans to the OpenTelemetry
-	// Collector service running inside Kubernetes.
-	exporter, err := otlptracegrpc.New(
-		ctx,
-		otlptracegrpc.WithEndpoint("otel-collector:4317"),
-		otlptracegrpc.WithInsecure(),
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	// The tracer provider owns span processors and resource metadata, including
-	// the service.name used by backends such as Jaeger.
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(
-			resource.NewWithAttributes(
-				semconv.SchemaURL,
-				semconv.ServiceName("hello-service-new"),
-			),
-		),
-	)
-
-	// Register this provider globally so otel.Tracer uses the configured
-	// exporter and resource for every span created by this process.
-	otel.SetTracerProvider(tp)
-
-	// Configure W3C TraceContext and Baggage propagation so trace IDs flow
-	// across HTTP service boundaries.
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
-	defer func() {
-		_ = tp.Shutdown(ctx)
-	}()
+	shutdown := utils.InitTracer("hello-service-new")
+	defer shutdown()
 
 	// NewHandler instruments inbound HTTP requests by extracting trace context
 	// and creating a server span for each request.

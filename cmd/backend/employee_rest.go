@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,18 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"promethius/utils"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/propagation"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 type Employee struct {
@@ -28,47 +21,6 @@ type Employee struct {
 	Name    string `json:"name"`
 	Age     int    `json:"age"`
 	Address string `json:"address"`
-}
-
-func initTracer() func() {
-
-	ctx := context.Background()
-
-	// The OTLP gRPC exporter sends completed spans to the OpenTelemetry
-	// Collector service running inside Kubernetes.
-	exporter, err := otlptracegrpc.New(
-		ctx,
-		otlptracegrpc.WithEndpoint("otel-collector:4317"),
-		otlptracegrpc.WithInsecure(),
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	// The tracer provider owns span processors and resource metadata, including
-	// the service.name used by backends such as Jaeger.
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(
-			resource.NewWithAttributes(
-				semconv.SchemaURL,
-				semconv.ServiceName("employee-service"),
-			),
-		),
-	)
-
-	// Register this provider globally so otel.Tracer uses the configured
-	// exporter and resource for every span created by this process.
-	otel.SetTracerProvider(tp)
-
-	// Configure W3C TraceContext and Baggage propagation so trace IDs flow
-	// across HTTP service boundaries.
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-
-	return func() {
-		_ = tp.Shutdown(ctx)
-	}
 }
 
 func employeeHandler(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +81,7 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	shutdown := initTracer()
+	shutdown := utils.InitTracer("employee-service")
 	defer shutdown()
 
 	// NewHandler instruments inbound HTTP requests by extracting trace context
