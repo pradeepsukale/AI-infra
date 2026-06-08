@@ -1,14 +1,14 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: go-api-monitor
+  name: otel-collector-monitor
   labels:
     release: prometheus   # MUST match your Prometheus Helm release name
 spec:
   selector:
     matchLabels:
-      app: go-api
+      app: otel-collector
   endpoints:
-    - port: http
+    - port: prometheus
       path: /metrics
       interval: 5s

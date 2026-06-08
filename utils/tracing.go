@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
@@ -49,5 +51,36 @@ func InitTracer(serviceName string) func() {
 
 	return func() {
 		_ = tp.Shutdown(ctx)
+	}
+}
+
+func InitMeter(serviceName string) func() {
+	ctx := context.Background()
+
+	exporter, err := otlpmetricgrpc.New(
+		ctx,
+		otlpmetricgrpc.WithEndpoint(otelCollectorEndpoint),
+		otlpmetricgrpc.WithInsecure(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(exporter),
+		),
+		sdkmetric.WithResource(
+			resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceName(serviceName),
+			),
+		),
+	)
+
+	otel.SetMeterProvider(mp)
+
+	return func() {
+		_ = mp.Shutdown(ctx)
 	}
 }

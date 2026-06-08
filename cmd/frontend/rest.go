@@ -8,28 +8,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"promethius/utils"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
-var httpDuration = prometheus.NewHistogramVec(
-	prometheus.HistogramOpts{
-		Name:    "http_request_duration_seconds_new",
-		Help:    "Request latency",
-		Buckets: []float64{0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2},
-	},
-	[]string{"method", "route", "caller"},
-)
-
-func init() {
-	prometheus.MustRegister(httpDuration)
-}
+var httpDuration metric.Float64Histogram
 
 func hello(w http.ResponseWriter, r *http.Request) {
 
@@ -113,14 +101,37 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 	duration := time.Since(start).Seconds()
 
-	httpDuration.WithLabelValues(r.Method, "/api/hello", caller).Observe(duration)
+	httpDuration.Record(
+		ctx,
+		duration,
+		metric.WithAttributes(
+			attribute.String("method", r.Method),
+			attribute.String("route", "/api/hello"),
+			attribute.String("caller", caller),
+		),
+	)
 
 	w.Write([]byte("Hello 🚀"))
 }
 
 func main() {
-	shutdown := utils.InitTracer("hello-service-new")
-	defer shutdown()
+	shutdownTracer := utils.InitTracer("hello-service-new")
+	defer shutdownTracer()
+
+	shutdownMeter := utils.InitMeter("hello-service-new")
+	defer shutdownMeter()
+
+	meter := otel.Meter("hello-service")
+	var err error
+	httpDuration, err = meter.Float64Histogram(
+		"http_request_duration_seconds_new",
+		metric.WithDescription("Request latency"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// NewHandler instruments inbound HTTP requests by extracting trace context
 	// and creating a server span for each request.
@@ -130,7 +141,9 @@ func main() {
 	)
 
 	http.Handle("/api/hello", handler)
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	http.ListenAndServe(":8080", nil)
 }
