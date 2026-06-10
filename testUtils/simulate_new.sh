@@ -24,21 +24,19 @@ local thread_id=$1
 local service_index=$(( (thread_id - 1) % ${#SERVICES[@]} ))
 local service_name=${SERVICES[$service_index]}
 
-local header="X-Caller-Service: $service_name"
+local header="X-Caller-Service:$service_name"
 
 for ((i=1; i<=NUM_REQUESTS; i++))
 do
 echo "[Thread $thread_id][$service_name] Request #$i"
 
-```
 response=$(curl -s -w "%{http_code}" -o /dev/null -H "$header" "$URL")
 echo "[Thread $thread_id][$service_name] Status: $response"
 
 # Random sleep between 0–10 seconds
-SLEEP_TIME=$((RANDOM % 11))
-echo "[Thread $thread_id][$service_name] Sleeping for $SLEEP_TIME sec..."
-sleep $SLEEP_TIME
-```
+#SLEEP_TIME=$((RANDOM % 11))
+#echo "[Thread $thread_id][$service_name] Sleeping for $SLEEP_TIME sec..."
+#sleep $SLEEP_TIME
 
 done
 

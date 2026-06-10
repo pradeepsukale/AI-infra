@@ -175,7 +175,7 @@
           "refId": "A"
         }
       ],
-      "title": " Current RPS",
+      "title": " Request per Second (RPS)",
       "type": "timeseries"
     },
     {
@@ -447,11 +447,12 @@
           "refId": "A"
         }
       ],
-      "title": "Request Rate (RPS)",
+      "title": "Current Request",
       "type": "stat"
     }
   ],
   "preload": false,
+  "refresh": "5s",
   "schemaVersion": 42,
   "tags": [],
   "templating": {
@@ -460,9 +461,17 @@
         "allowCustomValue": false,
         "current": {
           "text": [
+            "a10nsp",
+            "leaf",
+            "olt",
+            "other",
             "unknown"
           ],
           "value": [
+            "a10nsp",
+            "leaf",
+            "olt",
+            "other",
             "unknown"
           ]
         },
@@ -495,6 +504,6 @@
   "timezone": "browser",
   "title": "go-api dashboard",
   "uid": "ad8gsgb",
-  "version": 24,
+  "version": 26,
   "weekStart": ""
 }
