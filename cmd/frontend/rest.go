@@ -15,12 +15,25 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.uber.org/zap"
 )
+
+var logger *zap.Logger
+
+func initLogger() {
+	var err error
+	logger, err = zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+}
 
 var httpDuration metric.Float64Histogram
 
 func hello(w http.ResponseWriter, r *http.Request) {
 
+	logger.Info(
+		"request hello called")
 	// otel.Tracer returns an instrumentation-scoped tracer used to create spans
 	// for this service's custom business operations.
 	tracer := otel.Tracer("hello-service")
@@ -47,6 +60,11 @@ func hello(w http.ResponseWriter, r *http.Request) {
 			http.DefaultTransport,
 		),
 	}
+
+	logger.Info(
+		"About to call employee",
+		zap.String("empId", "101"),
+	)
 
 	req, err1 := http.NewRequestWithContext(
 		ctx,
@@ -96,6 +114,11 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 	caller := getCallerService(r)
 
+	logger.Info(
+		"got caller details",
+		zap.String("caller", caller),
+	)
+
 	// simulate latency
 	time.Sleep(time.Duration(rand.Intn(400)) * time.Millisecond)
 
@@ -115,6 +138,10 @@ func hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	initLogger()
+	defer logger.Sync()
+
 	shutdownTracer := utils.InitTracer("hello-service-new")
 	defer shutdownTracer()
 
@@ -139,6 +166,9 @@ func main() {
 		http.HandlerFunc(hello),
 		"hello-handler",
 	)
+
+	logger.Info(
+		"init completed")
 
 	http.Handle("/api/hello", handler)
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
