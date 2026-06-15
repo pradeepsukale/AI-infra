@@ -18,6 +18,8 @@ kubectl get storageclass
 minikube image load promethius:vv1
 minikube image load employee-service:vv1
 
+helm upgrade loki-new grafana/loki --values loki-upgrade-values.yaml -n monitoring
+
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
