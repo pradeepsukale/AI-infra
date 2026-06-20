@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -19,14 +20,6 @@ import (
 )
 
 var logger *zap.Logger
-
-func initLogger() {
-	var err error
-	logger, err = zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-}
 
 var httpDuration metric.Float64Histogram
 
@@ -139,8 +132,12 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	initLogger()
+	logger, logErr := utils.InitLogger(context.Background())
 	defer logger.Sync()
+
+	if logErr != nil {
+		panic("InitLogger failed!!")
+	}
 
 	shutdownTracer := utils.InitTracer("hello-service-new")
 	defer shutdownTracer()

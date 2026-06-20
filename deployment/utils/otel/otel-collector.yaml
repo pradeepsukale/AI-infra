@@ -17,8 +17,8 @@ data:
           insecure: true
       prometheus:
         endpoint: "0.0.0.0:8889"
-      otlp/loki:
-        endpoint: loki.monitoring.svc.cluster.local:4317
+      otlphttp/loki:
+        endpoint: "http://loki-new-gateway.monitoring.svc.cluster.local:80/otlp"
         tls:
           insecure: true
 

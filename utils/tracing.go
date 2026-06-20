@@ -10,10 +10,10 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-const otelCollectorEndpoint = "otel-collector:4317"
+const OtelCollectorEndpoint = "otel-collector:4317"
 
 func InitTracer(serviceName string) func() {
 	ctx := context.Background()
@@ -22,7 +22,7 @@ func InitTracer(serviceName string) func() {
 	// Collector service running inside Kubernetes.
 	exporter, err := otlptracegrpc.New(
 		ctx,
-		otlptracegrpc.WithEndpoint(otelCollectorEndpoint),
+		otlptracegrpc.WithEndpoint(OtelCollectorEndpoint),
 		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {
@@ -59,7 +59,7 @@ func InitMeter(serviceName string) func() {
 
 	exporter, err := otlpmetricgrpc.New(
 		ctx,
-		otlpmetricgrpc.WithEndpoint(otelCollectorEndpoint),
+		otlpmetricgrpc.WithEndpoint(OtelCollectorEndpoint),
 		otlpmetricgrpc.WithInsecure(),
 	)
 	if err != nil {
