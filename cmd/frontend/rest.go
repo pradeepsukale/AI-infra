@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -37,6 +36,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		"business-logic",
 	)
+	defer span.End()
 
 	span.SetAttributes(
 		attribute.String("http.method", r.Method),
@@ -57,6 +57,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	logger.Info(
 		"About to call employee",
 		zap.String("empId", "101"),
+		zap.Any("context", ctx),
 	)
 
 	req, err1 := http.NewRequestWithContext(
@@ -67,14 +68,16 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err1 != nil {
-		fmt.Println(err1.Error())
+		logger.Error("Failed to create employee service request", zap.Error(err1), zap.Any("context", ctx))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	resp, err := client.Do(req)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Error("Employee service request failed", zap.Error(err), zap.Any("context", ctx))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
 
@@ -86,10 +89,6 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(resp.Body)
 
 	log.Println(string(body))
-
-	time.Sleep(500 * time.Millisecond)
-
-	defer span.End()
 
 	time.Sleep(500 * time.Millisecond)
 
@@ -110,6 +109,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	logger.Info(
 		"got caller details",
 		zap.String("caller", caller),
+		zap.Any("context", ctx),
 	)
 
 	// simulate latency
@@ -132,12 +132,9 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	logger, logErr := utils.InitLogger(context.Background())
-	defer logger.Sync()
-
-	if logErr != nil {
-		panic("InitLogger failed!!")
-	}
+	var shutDownLogger func(context.Context) error
+	logger, shutDownLogger = utils.InitLogger(context.Background())
+	defer shutDownLogger(context.Background())
 
 	shutdownTracer := utils.InitTracer("hello-service-new")
 	defer shutdownTracer()

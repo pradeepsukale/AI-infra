@@ -60,6 +60,18 @@ docker-version:
 	@printf '%s\n' '$(VERSION)'
 
 docker-build: docker-build-frontend docker-build-backend
+	@if command -v minikube >/dev/null 2>&1 && minikube status --format '{{.Host}}' 2>/dev/null | grep -q "Running"; then \
+		echo "Loading new images into Minikube..."; \
+		minikube image load $(FRONTEND_IMAGE); \
+		minikube image load $(BACKEND_IMAGE); \
+		echo "Removing older versions from Minikube..."; \
+		minikube image ls | grep -E '(promethius|employee-service):vv' | grep -v '$(VERSION)' | xargs -r minikube image rm 2>/dev/null || true; \
+	else \
+		echo "Minikube is not running or not found. Skipping Minikube operations."; \
+	fi
+	@echo "Removing older versions from local Docker..."
+	@$(DOCKER) image ls --format '{{.Repository}}:{{.Tag}}' | grep -E '^(promethius|employee-service):vv' | grep -v '$(VERSION)' | xargs -r $(DOCKER) rmi 2>/dev/null || true
+
 
 docker-build-frontend:
 	$(DOCKER) build \

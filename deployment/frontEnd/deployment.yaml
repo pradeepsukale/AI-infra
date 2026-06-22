@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: go-api
-          image: promethius:vv5
+          image: promethius:vv16
           ports:
             - containerPort: 8080
           env:

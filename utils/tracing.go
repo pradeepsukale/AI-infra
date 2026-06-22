@@ -34,8 +34,7 @@ func InitTracer(serviceName string) func() {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(
-			resource.NewWithAttributes(
-				semconv.SchemaURL,
+			resource.NewSchemaless(
 				semconv.ServiceName(serviceName),
 			),
 		),
@@ -71,8 +70,7 @@ func InitMeter(serviceName string) func() {
 			sdkmetric.NewPeriodicReader(exporter),
 		),
 		sdkmetric.WithResource(
-			resource.NewWithAttributes(
-				semconv.SchemaURL,
+			resource.NewSchemaless(
 				semconv.ServiceName(serviceName),
 			),
 		),

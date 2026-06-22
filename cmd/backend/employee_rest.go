@@ -84,6 +84,8 @@ func main() {
 	shutdown := utils.InitTracer("employee-service")
 	defer shutdown()
 
+	log.Println("fdfgdfdf")
+
 	// NewHandler instruments inbound HTTP requests by extracting trace context
 	// and creating a server span for each request.
 	handler := otelhttp.NewHandler(
@@ -93,7 +95,7 @@ func main() {
 
 	http.Handle("/employee/", handler)
 
-	log.Println("Server started on :8080")
+	log.Println("dsds Server started on :8080")
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

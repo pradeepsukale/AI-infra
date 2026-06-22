@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: employee-service
-          image: employee-service:vv5
+          image: employee-service:vv16
           imagePullPolicy: IfNotPresent
 
           ports:

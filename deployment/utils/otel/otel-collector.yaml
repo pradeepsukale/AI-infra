@@ -32,7 +32,7 @@ data:
           exporters: [prometheus]
         logs:
           receivers: [otlp]
-          exporters: [otlp/loki]
+          exporters: [otlphttp/loki]
 
 
 

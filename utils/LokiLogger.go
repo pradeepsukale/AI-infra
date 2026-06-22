@@ -35,8 +35,7 @@ func InitLogger(ctx context.Context) (*zap.Logger, func(context.Context) error) 
 	// When these hit Loki, they become indexed fields (labels) like `service_name="my-go-app"`.
 	res, err := resource.Merge(
 		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
+		resource.NewSchemaless(
 			semconv.ServiceName("my-go-app"),
 			semconv.ServiceVersion("1.0.0"),
 			semconv.DeploymentEnvironment("dev"),
