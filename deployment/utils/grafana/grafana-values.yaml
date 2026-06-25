@@ -1,8 +1,85 @@
+# Prometheus Operator deployment configuration
+prometheus:
+  prometheusSpec:
+    enableFeatures:
+      - exemplar-storage
+
+# Grafana deployment configuration
 grafana:
   persistence:
     enabled: false
 
-  # (optional) keep things simple for now
   sidecar:
     dashboards:
       enabled: true
+    datasources:
+      # Disable the default read-only Prometheus data source configuration
+      defaultDatasourceEnabled: false
+
+  # Define custom, editable data sources (Prometheus, Loki, Tempo, and Alertmanager)
+  additionalDataSources:
+    - name: Prometheus
+      type: prometheus
+      uid: prometheus
+      url: http://prometheus-kube-prometheus-prometheus.default:9090/
+      access: proxy
+      isDefault: true
+      editable: true # Makes the data source configuration editable in the UI
+      jsonData:
+        httpMethod: POST
+        timeInterval: 30s
+        # Map trace IDs from Prometheus exemplars to Tempo (Metrics -> Traces)
+        exemplarTraceIdDestinations:
+          - datasourceUid: "dfopcxp6nyf40b" # Tempo datasource UID
+            name: "trace_id"                # Label name containing the trace ID
+          - datasourceUid: "dfopcxp6nyf40b"
+            name: "traceId"
+          - datasourceUid: "dfopcxp6nyf40b"
+            name: "traceID"
+
+    - name: loki
+      type: loki
+      uid: cfosfpvvubpj4d
+      url: http://loki-new-gateway.monitoring.svc.cluster.local
+      access: proxy
+      isDefault: false
+      editable: true
+      jsonData:
+        # Link Logs to Traces (Loki -> Tempo)
+        derivedFields:
+          - name: TraceID
+            matcherType: regex
+            matcherRegex: '(?:trace_id|traceId)=\"?([a-f0-9]{32})\"?'
+            datasourceUid: dfopcxp6nyf40b
+
+    - name: tempo
+      type: tempo
+      uid: dfopcxp6nyf40b
+      url: http://tempo.monitoring.svc.cluster.local:3200
+      access: proxy
+      isDefault: false
+      editable: true
+      jsonData:
+        # Link Traces to Logs (Tempo -> Loki)
+        tracesToLogsV2:
+          customQuery: false
+          datasourceUid: cfosfpvvubpj4d
+          filterBySpanID: true
+          filterByTraceID: true
+          tags:
+            - key: "service.name"
+              value: "service_name"
+        # Link Traces to Metrics (Tempo -> Prometheus)
+        tracesToMetrics:
+          datasourceUid: prometheus
+
+    - name: Alertmanager
+      type: alertmanager
+      uid: alertmanager
+      url: http://prometheus-kube-prometheus-alertmanager.default:9093/
+      access: proxy
+      isDefault: false
+      editable: true
+      jsonData:
+        handleGrafanaManagedAlerts: false
+        implementation: prometheus

@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func InitLogger(ctx context.Context) (*zap.Logger, func(context.Context) error) {
+func InitLogger(ctx context.Context, serviceName string) (*zap.Logger, func(context.Context) error) {
 
 	// ==========================================
 	// 1. NETWORK EXPORTER SETUP
@@ -36,7 +36,7 @@ func InitLogger(ctx context.Context) (*zap.Logger, func(context.Context) error) 
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewSchemaless(
-			semconv.ServiceName("my-go-app"),
+			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion("1.0.0"),
 			semconv.DeploymentEnvironment("dev"),
 		),
@@ -83,7 +83,7 @@ func InitLogger(ctx context.Context) (*zap.Logger, func(context.Context) error) 
 	// to OpenTelemetry. The `otelzap` bridge acts as an interpreter.
 	// Core #2: It intercepts Zap logs, translates them into the binary OTel format,
 	// and passes them directly to the OTel LoggerProvider we built in step 3.
-	otelCore := otelzap.NewCore("my-go-app", otelzap.WithLoggerProvider(provider))
+	otelCore := otelzap.NewCore(serviceName, otelzap.WithLoggerProvider(provider))
 
 	// ==========================================
 	// 6. THE ZAP TEE (Dual Routing)

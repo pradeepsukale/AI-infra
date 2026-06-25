@@ -25,7 +25,9 @@ var httpDuration metric.Float64Histogram
 func hello(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info(
-		"request hello called")
+		"request hello called",
+		zap.Any("context", r.Context()),
+	)
 	// otel.Tracer returns an instrumentation-scoped tracer used to create spans
 	// for this service's custom business operations.
 	tracer := otel.Tracer("hello-service")
@@ -133,7 +135,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	var shutDownLogger func(context.Context) error
-	logger, shutDownLogger = utils.InitLogger(context.Background())
+	logger, shutDownLogger = utils.InitLogger(context.Background(), "hello-service-new")
 	defer shutDownLogger(context.Background())
 
 	shutdownTracer := utils.InitTracer("hello-service-new")

@@ -1,9 +1,8 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 type Employee struct {
@@ -22,6 +22,8 @@ type Employee struct {
 	Age     int    `json:"age"`
 	Address string `json:"address"`
 }
+
+var logger *zap.Logger
 
 func employeeHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -35,14 +37,14 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		"get-employee",
 	)
-
-	fmt.Print("fdfd")
-
 	defer span.End()
+
+	logger.Info("Received request at employeeHandler", zap.Any("context", ctx))
 
 	parts := strings.Split(r.URL.Path, "/")
 
 	if len(parts) < 3 {
+		logger.Error("employee id missing in request path", zap.Any("context", ctx))
 		http.Error(w, "employee id missing", http.StatusBadRequest)
 		return
 	}
@@ -70,10 +72,13 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 		Address: "Hyderabad",
 	}
 
+	logger.Info("Returning employee details", zap.String("employee.id", employeeID), zap.Any("context", ctx))
+
 	w.Header().Set("Content-Type", "application/json")
 
 	err := json.NewEncoder(w).Encode(employee)
 	if err != nil {
+		logger.Error("Failed to encode response", zap.Error(err), zap.Any("context", ctx))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -81,10 +86,14 @@ func employeeHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
+	var shutDownLogger func(context.Context) error
+	logger, shutDownLogger = utils.InitLogger(context.Background(), "employee-service")
+	defer shutDownLogger(context.Background())
+
 	shutdown := utils.InitTracer("employee-service")
 	defer shutdown()
 
-	log.Println("fdfgdfdf")
+	logger.Info("Starting employee-service server")
 
 	// NewHandler instruments inbound HTTP requests by extracting trace context
 	// and creating a server span for each request.
@@ -95,10 +104,10 @@ func main() {
 
 	http.Handle("/employee/", handler)
 
-	log.Println("dsds Server started on :8080")
+	logger.Info("Server started on :8080")
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("Server listen and serve failed", zap.Error(err))
 	}
 }
