@@ -16,10 +16,10 @@ case "${1:-}" in
     ;;
   promethius)
     # From promethius/testUtils/createPortForwards.sh
-    kubectl port-forward svc/prometheus-grafana 3000:80 &
+    kubectl port-forward svc/promethius-app-grafana 3000:80 &
     kubectl port-forward svc/go-api-service 8080:80 &
-    kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 &
-    kubectl port-forward svc/jaeger 16686:16686 &
+    kubectl port-forward svc/promethius-app-kube-promet-prometheus 9090:9090 &
+    kubectl port-forward svc/promethius-app-tempo 3100:3100 &
     ;;
   *)
     echo "Usage: $0 {go-gin-server|promethius}"

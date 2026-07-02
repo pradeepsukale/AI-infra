@@ -1,0 +1,164 @@
+frontend:
+  enabled: true
+  replicaCount: 2
+  image: promethius:vv20
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 8080
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image: employee-service:vv20
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+
+otel:
+  enabled: true
+  image: otel/opentelemetry-collector:0.102.1
+  tempoEndpoint: promethius-app-tempo.default.svc.cluster.local:4317
+  lokiEndpoint: http://promethius-app-loki-gateway.default.svc.cluster.local:80/otlp
+
+tempo:
+  enabled: true
+
+serviceMonitor:
+  enabled: true
+  releaseLabel: promethius-app
+
+# Third-party Subcharts (Dependencies)
+kube-prometheus-stack:
+  enabled: true
+  prometheus:
+    prometheusSpec:
+      enableFeatures:
+        - exemplar-storage
+  grafana:
+    persistence:
+      enabled: false
+    sidecar:
+      dashboards:
+        enabled: true
+      datasources:
+        defaultDatasourceEnabled: true
+        extraJsonData:
+          exemplarTraceIdDestinations:
+            - datasourceUid: "dfopcxp6nyf40b"
+              name: "trace_id"
+            - datasourceUid: "dfopcxp6nyf40b"
+              name: "traceId"
+            - datasourceUid: "dfopcxp6nyf40b"
+              name: "traceID"
+    additionalDataSources:
+      - name: loki
+        type: loki
+        uid: cfosfpvvubpj4d
+        url: http://promethius-app-loki-gateway.default.svc.cluster.local:80
+        access: proxy
+        isDefault: false
+        editable: true
+        jsonData:
+          derivedFields:
+            - name: TraceID
+              matcherType: regex
+              matcherRegex: '(?:trace_id|traceId)=\"?([a-f0-9]{32})\"?'
+              datasourceUid: dfopcxp6nyf40b
+      - name: tempo
+        type: tempo
+        uid: dfopcxp6nyf40b
+        url: http://promethius-app-tempo.default.svc.cluster.local:3200
+        access: proxy
+        isDefault: false
+        editable: true
+        jsonData:
+          tracesToLogsV2:
+            customQuery: false
+            datasourceUid: cfosfpvvubpj4d
+            filterBySpanID: true
+            filterByTraceID: true
+            tags:
+              - key: "service.name"
+                value: "service_name"
+          tracesToMetrics:
+            datasourceUid: prometheus
+      - name: Alertmanager
+        type: alertmanager
+        uid: alertmanager
+        url: http://promethius-app-kube-promet-alertmanager.default.svc.cluster.local:9093/
+        access: proxy
+        isDefault: false
+        editable: true
+        jsonData:
+          handleGrafanaManagedAlerts: false
+          implementation: prometheus
+
+loki:
+  enabled: true
+  deploymentMode: SingleBinary
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+    storage:
+      type: s3
+      bucketNames:
+        chunks: chunks
+        ruler: ruler
+        admin: admin
+      s3:
+        endpoint: http://promethius-app-minio.default.svc.cluster.local:9000
+        accessKeyId: root-user
+        secretAccessKey: supersecretpassword
+        s3ForcePathStyle: true
+        insecure: true
+  minio:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 10Gi
+  gateway:
+    enabled: true
+  singleBinary:
+    replicas: 1
+    persistence:
+      enabled: true
+      size: 10Gi
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
+  ingester:
+    replicas: 0
+  querier:
+    replicas: 0
+  queryFrontend:
+    replicas: 0
+  queryScheduler:
+    replicas: 0
+  distributor:
+    replicas: 0
+  compactor:
+    replicas: 0
+  indexGateway:
+    replicas: 0

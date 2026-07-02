@@ -71,6 +71,9 @@ docker-build: docker-build-frontend docker-build-backend
 	fi
 	@echo "Removing older versions from local Docker..."
 	@$(DOCKER) image ls --format '{{.Repository}}:{{.Tag}}' | grep -E '^(promethius|employee-service):vv' | grep -v '$(VERSION)' | xargs -r $(DOCKER) rmi 2>/dev/null || true
+	@echo "Updating Helm chart values.yaml to version $(VERSION)..."
+	@sed -i 's/promethius:vv[0-9]*/promethius:$(VERSION)/g' deployment/promethius-chart/values.yaml
+	@sed -i 's/employee-service:vv[0-9]*/employee-service:$(VERSION)/g' deployment/promethius-chart/values.yaml
 
 
 docker-build-frontend:

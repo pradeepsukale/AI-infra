@@ -24,13 +24,15 @@ var httpDuration metric.Float64Histogram
 
 func hello(w http.ResponseWriter, r *http.Request) {
 
-	logger.Info(
-		"request hello called",
-		zap.Any("context", r.Context()),
-	)
+	for i := 0; i < 1000; i++ {
+		logger.Info(
+			"request hello called",
+			zap.Any("context", r.Context()),
+		)
+	}
 	// otel.Tracer returns an instrumentation-scoped tracer used to create spans
 	// for this service's custom business operations.
-	tracer := otel.Tracer("hello-service")
+	tracer := otel.Tracer("go-api")
 
 	// Start creates a span from the incoming request context, preserving any
 	// distributed trace context extracted by the otelhttp server middleware.
@@ -135,16 +137,16 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	var shutDownLogger func(context.Context) error
-	logger, shutDownLogger = utils.InitLogger(context.Background(), "hello-service-new")
+	logger, shutDownLogger = utils.InitLogger(context.Background(), "go-api")
 	defer shutDownLogger(context.Background())
 
-	shutdownTracer := utils.InitTracer("hello-service-new")
+	shutdownTracer := utils.InitTracer("go-api")
 	defer shutdownTracer()
 
-	shutdownMeter := utils.InitMeter("hello-service-new")
+	shutdownMeter := utils.InitMeter("go-api")
 	defer shutdownMeter()
 
-	meter := otel.Meter("hello-service")
+	meter := otel.Meter("go-api")
 	var err error
 	httpDuration, err = meter.Float64Histogram(
 		"http_request_duration_seconds_new",

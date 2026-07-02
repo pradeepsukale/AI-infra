@@ -1,0 +1,89 @@
+{{- if .Values.otel.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  otel-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      otlp/tempo:
+        endpoint: {{ .Values.otel.tempoEndpoint }}
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        enable_open_metrics: true
+      otlphttp/loki:
+        endpoint: "{{ .Values.otel.lokiEndpoint }}"
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlp/tempo]
+        metrics:
+          receivers: [otlp]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          exporters: [otlphttp/loki]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+      annotations:
+        checksum/config: {{ toYaml .Values.otel | sha256sum }}
+    spec:
+      containers:
+      - name: otel-collector
+        image: {{ .Values.otel.image }}
+        args:
+          - "--config=/conf/otel-config.yaml"
+        ports:
+          - containerPort: 4317
+          - containerPort: 4318
+          - containerPort: 8889
+        volumeMounts:
+          - name: config
+            mountPath: /conf
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: grpc
+      port: 4317
+      targetPort: 4317
+    - name: http
+      port: 4318
+      targetPort: 4318
+    - name: prometheus
+      port: 8889
+      targetPort: 8889
+{{- end }}
