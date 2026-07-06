@@ -90,6 +90,15 @@ func main() {
 	logger, shutDownLogger = utils.InitLogger(context.Background(), "employee-service")
 	defer shutDownLogger(context.Background())
 
+	configs := utils.IntiConfig()
+	logger.Info("Database connection parameters",
+		zap.String("db_host", configs.DbHost),
+		zap.String("db_port", configs.DbPort),
+		zap.String("db_name", configs.DbName),
+		zap.String("db_user", configs.DbUser),
+		zap.String("db_pass", configs.DbPass),
+	)
+
 	shutdown := utils.InitTracer("employee-service")
 	defer shutdown()
 

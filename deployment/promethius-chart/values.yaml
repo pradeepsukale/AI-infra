@@ -1,7 +1,7 @@
 frontend:
   enabled: true
   replicaCount: 2
-  image: promethius:vv20
+  image: promethius:vv22
   service:
     type: NodePort
     port: 80
@@ -17,7 +17,7 @@ frontend:
 backend:
   enabled: true
   replicaCount: 1
-  image: employee-service:vv20
+  image: employee-service:vv22
   service:
     type: ClusterIP
     port: 80
@@ -162,3 +162,15 @@ loki:
     replicas: 0
   indexGateway:
     replicas: 0
+
+# database configuration details
+database:
+  host: "shared-postgres-postgresql-0.default.svc.cluster.local"
+  port: 5432
+  name: "employee-service"
+  
+  # Point to the secret created by External Secrets Operator
+  existingSecret:
+    name: "postgres-credentials-secret"
+    userKey: "username"
+    passKey: "password"
